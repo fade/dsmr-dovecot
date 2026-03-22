@@ -1,0 +1,70 @@
+#!/bin/sh
+set -e
+
+VPOPMAIL_MYSQL=/home/vpopmail/etc/vpopmail.mysql
+DOVECOT_SQL=/etc/dovecot/dovecot-vpopmail-sql.conf.ext
+
+generate_sql_conf() {
+    # Parse vpopmail.mysql: host|port|user|password|database
+    if [ ! -f "$VPOPMAIL_MYSQL" ]; then
+        echo "dovecot-vpopmail: $VPOPMAIL_MYSQL not found; skipping SQL config generation" >&2
+        return 1
+    fi
+
+    line=$(cat "$VPOPMAIL_MYSQL")
+    db_host=$(echo "$line" | cut -d'|' -f1)
+    db_port=$(echo "$line" | cut -d'|' -f2)
+    db_user=$(echo "$line" | cut -d'|' -f3)
+    db_pass=$(echo "$line" | cut -d'|' -f4)
+    db_name=$(echo "$line" | cut -d'|' -f5)
+
+    if [ -z "$db_host" ] || [ -z "$db_user" ] || [ -z "$db_pass" ] || [ -z "$db_name" ]; then
+        echo "dovecot-vpopmail: could not parse $VPOPMAIL_MYSQL" >&2
+        return 1
+    fi
+
+    # Build connect string; include port only if non-standard.
+    if [ "$db_host" = "localhost" ] || [ "$db_host" = "127.0.0.1" ]; then
+        connect="host=${db_host} dbname=${db_name} user=${db_user} password=${db_pass}"
+    else
+        connect="host=${db_host} port=${db_port} dbname=${db_name} user=${db_user} password=${db_pass}"
+    fi
+
+    cat > "$DOVECOT_SQL" <<EOF
+driver = mysql
+connect = ${connect}
+
+# Verify password; return home dir and uid/gid for the session.
+password_query = \\
+  SELECT pw_passwd AS password, pw_dir AS userdb_home, \\
+         89 AS userdb_uid, 89 AS userdb_gid \\
+  FROM vpopmail \\
+  WHERE pw_name = '%n' AND pw_domain = '%d'
+
+user_query = \\
+  SELECT pw_dir AS home, 89 AS uid, 89 AS gid \\
+  FROM vpopmail \\
+  WHERE pw_name = '%n' AND pw_domain = '%d'
+EOF
+    chmod 640 "$DOVECOT_SQL"
+    chown root:dovecot "$DOVECOT_SQL"
+}
+
+case "$1" in
+    configure)
+        generate_sql_conf || true
+
+        if command -v doveadm >/dev/null 2>&1; then
+            doveadm reload 2>/dev/null || true
+        fi
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+    *)
+        echo "postinst called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+
+exit 0
