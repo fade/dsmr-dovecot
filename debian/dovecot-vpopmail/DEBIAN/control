@@ -2,7 +2,7 @@ Package: dovecot-vpopmail
 Version: 2.4.1-1
 Architecture: all
 Maintainer: Brian O'Reilly <fade@deepsky.com>
-Installed-Size: 19
+Installed-Size: 20
 Depends: dovecot-core (>= 1:2.4), dovecot-imapd (>= 1:2.4), dovecot-mysql (>= 1:2.4), vpopmail
 Section: mail
 Priority: optional
