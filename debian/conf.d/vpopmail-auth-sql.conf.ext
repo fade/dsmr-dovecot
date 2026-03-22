@@ -21,3 +21,28 @@ userdb sql {
   iterate_query = \
     SELECT CONCAT(pw_name, '@', pw_domain) AS user FROM vpopmail
 }
+
+# System user fallback: strip the domain part so passwd-file and userdb can
+# find the local Unix account.  These blocks are tried after SQL blocks fail.
+#
+# /etc/dovecot/system-passwd must be owned root:dovecot 640.  Format is the
+# standard passwd(5) format: username:{CRYPT}hash:uid:gid:gecos:home:shell.
+# The {CRYPT} prefix is required; dovecot does not auto-detect crypt hashes.
+# auth_username_format strips the @domain before the file lookup.
+#
+# To add a system user:
+#   HASH=$(openssl passwd -6 'thepassword')
+#   echo "user:{CRYPT}${HASH}:uid:gid::/home/user:/bin/bash" | \
+#     sudo tee -a /etc/dovecot/system-passwd
+passdb passwd-file {
+  auth_username_format = %{user|username}
+  passwd_file_path = /etc/dovecot/system-passwd
+  result_failure = continue
+  result_internalfail = continue
+}
+
+userdb passwd-file {
+  auth_username_format = %{user|username}
+  passwd_file_path = /etc/dovecot/system-passwd
+  result_failure = continue
+}

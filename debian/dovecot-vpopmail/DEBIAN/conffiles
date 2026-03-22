@@ -1,5 +1,0 @@
-/etc/dovecot/conf.d/05-vpopmail-auth.conf
-/etc/dovecot/conf.d/99-vpopmail-mail.conf
-/etc/dovecot/conf.d/99-vpopmail-master.conf
-/etc/dovecot/conf.d/99-vpopmail-ssl.conf
-/etc/dovecot/conf.d/vpopmail-auth-sql.conf.ext

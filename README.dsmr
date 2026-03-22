@@ -53,23 +53,52 @@ incompatible with qmail/vdelivermail which delivers to ~<pw_dir>/Maildir/new/~.
 This package sets ~mail_inbox_path = ~/Maildir~ so that dovecot's INBOX IS
 the Maildir root, matching qmail delivery.
 
+** Authentication flow — system users
+
+Unix system users (e.g. ~marvin~) can also retrieve mail via IMAP using
+~marvin@defaultdomain~ addressing.  The auth chain falls through from the SQL
+passdb (user not found in vpopmail table) to ~passdb passwd-file~, which reads
+~/etc/dovecot/system-passwd~ (owned ~root:dovecot 640~).
+
+The file uses standard ~passwd(5)~ format.  The password field *must* carry
+a ~{CRYPT}~ prefix; dovecot does not auto-detect crypt-style hashes:
+
+#+BEGIN_SRC
+marvin:{CRYPT}$6$...:1001:1002::/home/marvin:/bin/bash
+#+END_SRC
+
+~auth_username_format = %{user|username}~ strips the domain before the lookup
+so ~marvin@example.com~ finds the ~marvin~ entry.
+
+For qmail delivery, the user must also appear in ~/var/lib/qmail/users/assign~
+with an exact-match entry using the *virtualdomains-transformed* address (not
+the raw ~user@domain~ address):
+
+#+BEGIN_SRC
+=example.com-marvin:marvin:1001:1002:/home/marvin:::
+#+END_SRC
+
+(~example.com~ is in ~virtualdomains~, so qmail transforms ~marvin@example.com~
+to the local address ~example.com-marvin~ before the CDB lookup.)
+
 ** Installed conf.d snippets
 
-| File                          | Load order | Purpose                          |
-|-------------------------------+------------+----------------------------------|
-| ~05-vpopmail-auth.conf~       | before 10  | ~auth_mechanisms~; include SQL   |
-| ~vpopmail-auth-sql.conf.ext~  | via 05     | ~passdb sql~, ~userdb sql~       |
-| ~99-vpopmail-mail.conf~       | after all  | Maildir layout, uid/gid, INBOX   |
-| ~99-vpopmail-master.conf~     | after all  | auth socket permissions          |
-| ~99-vpopmail-ssl.conf~        | after all  | ~ssl = required~                 |
+| File                          | Load order | Purpose                              |
+|-------------------------------+------------+--------------------------------------|
+| ~05-vpopmail-auth.conf~       | before 10  | ~auth_mechanisms~; include SQL       |
+| ~vpopmail-auth-sql.conf.ext~  | via 05     | passdb/userdb: SQL + system-passwd   |
+| ~99-vpopmail-mail.conf~       | after all  | Maildir layout, uid/gid, INBOX       |
+| ~99-vpopmail-master.conf~     | after all  | auth socket permissions              |
+| ~99-vpopmail-ssl.conf~        | after all  | ~ssl = required~                     |
 
 ** Generated files (not conffiles)
 
-| File                                      | Owner/Mode   | Purpose                    |
-|-------------------------------------------+--------------+----------------------------|
+| File                                         | Owner/Mode       | Purpose                |
+|----------------------------------------------+------------------+------------------------|
 | ~/etc/dovecot/dovecot-vpopmail-sql.conf.ext~ | root:dovecot 640 | MySQL connection block |
-| ~/etc/dovecot/private/dovecot.pem~        | root:dovecot 644 | TLS certificate            |
-| ~/etc/dovecot/private/dovecot.key~        | root:dovecot 600 | TLS private key            |
+| ~/etc/dovecot/system-passwd~                 | root:dovecot 640 | System user auth file  |
+| ~/etc/dovecot/private/dovecot.pem~           | root:dovecot 644 | TLS certificate        |
+| ~/etc/dovecot/private/dovecot.key~           | root:dovecot 600 | TLS private key        |
 
 * TL;DR Runtime Documentation
 
@@ -177,6 +206,37 @@ sudo rm /etc/dovecot/conf.d/99-debug.conf
 sudo doveadm reload
 #+END_SRC
 
+** Adding a system user for IMAP access
+
+System users authenticate via ~/etc/dovecot/system-passwd~ (created empty by
+postinst, owned ~root:dovecot 640~).  Mail is delivered by qmail using the
+~users/assign~ exact-match entry.
+
+#+BEGIN_SRC sh
+# 1. Create the Unix user and their Maildir
+sudo useradd -m marvin
+sudo mkdir -p /home/marvin/Maildir/{new,cur,tmp}
+sudo chown -R marvin:marvin /home/marvin/Maildir
+echo './Maildir/' | sudo tee /home/marvin/.qmail
+sudo chown marvin:marvin /home/marvin/.qmail
+
+# 2. Generate a SHA-512 password hash and add to system-passwd
+HASH=$(openssl passwd -6 'thepassword')
+echo "marvin:{CRYPT}${HASH}:$(id -u marvin):$(id -g marvin)::/home/marvin:/bin/bash" \
+  | sudo tee -a /etc/dovecot/system-passwd
+sudo doveadm reload
+
+# 3. Route marvin@example.com to the system user in qmail users/assign
+#    (Insert BEFORE the +example.com- wildcard line; exact matches take priority)
+sudo sed -i "/^+example.com-/i =example.com-marvin:marvin:$(id -u marvin):$(id -g marvin):/home/marvin:::" \
+  /var/lib/qmail/users/assign
+sudo /var/lib/qmail/bin/qmail-newu
+
+# 4. Verify
+sudo doveadm auth test marvin@example.com thepassword
+sudo doveadm user marvin@example.com
+#+END_SRC
+
 ** Listing all vpopmail IMAP users (doveadm)
 
 #+BEGIN_SRC sh
@@ -189,7 +249,7 @@ sudo doveadm user '*'
 sudo doveadm mailbox status -u user@example.com all INBOX
 sudo doveadm mailbox list -u user@example.com
 sudo doveadm user user@example.com
-# Shows: uid, gid, home (pw_dir), mail_path
+# Shows: uid, gid, home, mail_path
 #+END_SRC
 
 ** Rebuilding from source

@@ -80,6 +80,15 @@ case "$1" in
         generate_sql_conf || true
         setup_tls || true
 
+        # Create the system-passwd file if it does not exist.
+        # This file holds passwd(5)-format entries for local Unix users that
+        # should be accessible via IMAP using user@defaultdomain addressing.
+        if [ ! -f /etc/dovecot/system-passwd ]; then
+            touch /etc/dovecot/system-passwd
+            chown root:dovecot /etc/dovecot/system-passwd
+            chmod 640 /etc/dovecot/system-passwd
+        fi
+
         if command -v doveadm >/dev/null 2>&1; then
             doveadm reload 2>/dev/null || true
         fi
