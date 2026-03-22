@@ -3,6 +3,9 @@ set -e
 
 VPOPMAIL_MYSQL=/home/vpopmail/etc/vpopmail.mysql
 DOVECOT_SQL=/etc/dovecot/dovecot-vpopmail-sql.conf.ext
+DOVECOT_CERT=/etc/dovecot/private/dovecot.pem
+DOVECOT_KEY=/etc/dovecot/private/dovecot.key
+QMAIL_CERT=/etc/qmail/servercert.pem
 
 generate_sql_conf() {
     # Parse vpopmail.mysql: host|port|user|password|database
@@ -46,9 +49,35 @@ generate_sql_conf() {
     chown root:dovecot "$DOVECOT_SQL"
 }
 
+setup_tls() {
+    # Do nothing if dovecot already has a cert.
+    [ -f "$DOVECOT_CERT" ] && return 0
+
+    mkdir -p /etc/dovecot/private
+    chmod 750 /etc/dovecot/private
+
+    if [ -f "$QMAIL_CERT" ]; then
+        # Extract cert and key from the qmail combined PEM.
+        openssl x509 -in "$QMAIL_CERT" -out "$DOVECOT_CERT" 2>/dev/null
+        openssl pkey -in "$QMAIL_CERT" -out "$DOVECOT_KEY" 2>/dev/null
+    else
+        # Fall back to a self-signed certificate.
+        openssl req -new -x509 -days 3650 -nodes \
+            -out "$DOVECOT_CERT" -keyout "$DOVECOT_KEY" \
+            -subj "/CN=$(hostname -f 2>/dev/null || echo localhost)" 2>/dev/null
+    fi
+
+    if [ -f "$DOVECOT_CERT" ] && [ -f "$DOVECOT_KEY" ]; then
+        chown root:dovecot "$DOVECOT_CERT" "$DOVECOT_KEY"
+        chmod 644 "$DOVECOT_CERT"
+        chmod 600 "$DOVECOT_KEY"
+    fi
+}
+
 case "$1" in
     configure)
         generate_sql_conf || true
+        setup_tls || true
 
         if command -v doveadm >/dev/null 2>&1; then
             doveadm reload 2>/dev/null || true
