@@ -1,0 +1,5 @@
+debian/conf.d/10-mail.conf etc/dovecot/conf.d/
+debian/conf.d/10-auth.conf etc/dovecot/conf.d/
+debian/conf.d/auth-sql.conf.ext etc/dovecot/conf.d/
+debian/conf.d/10-ssl.conf etc/dovecot/conf.d/
+debian/conf.d/10-master.conf etc/dovecot/conf.d/
