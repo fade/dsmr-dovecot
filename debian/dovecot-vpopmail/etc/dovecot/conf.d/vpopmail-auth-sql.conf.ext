@@ -4,6 +4,8 @@
 !include_try /etc/dovecot/dovecot-vpopmail-sql.conf.ext
 
 passdb sql {
+  # vpopmail stores passwords as SHA-512 crypt ($6$...).
+  default_password_scheme = SHA512-CRYPT
   query = \
     SELECT pw_passwd AS password, pw_dir AS userdb_home, \
            89 AS userdb_uid, 89 AS userdb_gid \
