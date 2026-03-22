@@ -1,5 +1,5 @@
-./debian/conf.d/10-mail.conf
-./debian/conf.d/10-auth.conf
-./debian/conf.d/auth-sql.conf.ext
-./debian/conf.d/10-ssl.conf
-./debian/conf.d/10-master.conf
+./debian/conf.d/05-vpopmail-auth.conf
+./debian/conf.d/vpopmail-auth-sql.conf.ext
+./debian/conf.d/99-vpopmail-mail.conf
+./debian/conf.d/99-vpopmail-master.conf
+./debian/conf.d/99-vpopmail-ssl.conf
