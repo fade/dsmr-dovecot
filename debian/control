@@ -10,11 +10,11 @@ Architecture: all
 Depends: ${misc:Depends},
  dovecot-core (>= 1:2.4),
  dovecot-imapd (>= 1:2.4),
- dovecot-mysql (>= 1:2.4),
+ dovecot-pgsql (>= 1:2.4),
  vpopmail
 Description: dovecot IMAP configuration for vpopmail/qmail
  Configuration package that integrates dovecot 2.4 with a vpopmail/qmail
- mail stack. Authenticates users against the vpopmail MySQL database and
+ mail stack. Authenticates users against the vpopmail PostgreSQL database and
  serves mail from vpopmail Maildir directories.
  .
  Installs configuration snippets into /etc/dovecot/conf.d/ and sets up
