@@ -1,3 +1,9 @@
+# generated documentation (org is the source of truth)
+doc/dovecot-vpopmail.texi
+doc/dovecot-vpopmail.info
+doc/dovecot-vpopmail.html
+*~
+
 # debhelper staging and build artifacts
 debian/dovecot-vpopmail/
 debian/.debhelper/

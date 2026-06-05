@@ -1,4 +1,23 @@
 #!/usr/bin/make -f
 
+# DSMR-focused info manual + HTML page, derived from the org source of truth
+# (doc/dovecot-vpopmail.org) at build time.  This is a configuration-only
+# package; the generators (emacs, texinfo, pandoc) are Build-Depends only.
+EMACS ?= emacs
+TOPIC = doc/dovecot-vpopmail
+
 %:
 	dh $@
+
+override_dh_auto_build:
+	$(EMACS) --batch -Q \
+	    --eval "(require 'ox-texinfo)" \
+	    --eval "(with-current-buffer (find-file-noselect \"$(TOPIC).org\") (org-texinfo-export-to-texinfo))"
+	makeinfo --no-split "$(TOPIC).texi" -o "$(TOPIC).info"
+	$(EMACS) --batch -Q \
+	    --eval "(require 'ox-html)" \
+	    --eval "(setq org-html-validation-link nil)" \
+	    --eval "(with-current-buffer (find-file-noselect \"$(TOPIC).org\") (org-html-export-to-html))"
+
+override_dh_auto_clean:
+	rm -f "$(TOPIC).texi" "$(TOPIC).info" "$(TOPIC).html"

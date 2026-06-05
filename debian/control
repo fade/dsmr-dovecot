@@ -2,7 +2,10 @@ Source: dovecot-vpopmail
 Section: mail
 Priority: optional
 Maintainer: Brian O'Reilly <fade@deepsky.com>
-Build-Depends: debhelper-compat (= 13)
+Build-Depends: debhelper-compat (= 13),
+ emacs-nox | emacs,
+ texinfo,
+ pandoc
 Standards-Version: 4.6.2
 
 Package: dovecot-vpopmail

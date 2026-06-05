@@ -1,3 +1,15 @@
+dovecot-vpopmail (2.4.1-13) trixie; urgency=low
+
+  * Ship a DSMR-focused GNU info manual and HTML doc page derived from an
+    org-mode source of truth (doc/dovecot-vpopmail.org): the dovecot 2.4 SQL
+    passdb auth chain, the conf.d snippets, INBOX/Maildir compatibility, the
+    postinst-generated PostgreSQL/TLS/system-passwd files, and the debugging
+    gotchas.  Generators (emacs, texinfo, pandoc) are Build-Depends only.
+    Supersedes the old README.dsmr (which still described the pre-PostgreSQL
+    MySQL backend).
+
+ -- Brian O'Reilly <fade@deepsky.com>  Fri, 05 Jun 2026 11:30:00 -0400
+
 dovecot-vpopmail (2.4.1-12) trixie; urgency=low
 
   * Fix vpasswd-postgres-convert: handle legacy 8-field clear-passwd format
